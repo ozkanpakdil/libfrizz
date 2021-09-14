@@ -20,6 +20,11 @@ args:
       long: user-agent
       help: Send User-Agent <name> to server
       takes_value: true
+  - request:
+      short: X
+      long: request
+      help: Specifies a custom request method(POST,GET,HEAD...) to use when communicating with the HTTP server. check https://github.com/kursatkobya/libfrizz/issues/25
+      takes_value: true
   - output:
       short: o
       long: outpu

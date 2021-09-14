@@ -6,6 +6,7 @@ use clap::{load_yaml, App};
 use dprint_core::formatting::PrintOptions;
 use std::fs::File;
 use std::path::Path;
+use reqwest::Method;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -28,7 +29,13 @@ async fn main() -> Result<(), Error> {
         } else {
             format!("frizz / {}", frizz_version)
         };
-        let res = libfrizz::get_request(target, user_agent, verbose)
+
+        let method = match cmd_args.value_of("request") {
+            Some(x) => Method::from_bytes(x.as_bytes()).unwrap(),
+            _ => Method::GET
+        };
+
+        let res = libfrizz::execute_request(target, user_agent, verbose, "", method)
             .await
             .ok()
             .unwrap();
