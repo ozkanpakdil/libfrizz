@@ -49,7 +49,7 @@ mod tests {
             "http://httpbin.org/get",
             "rusty".to_string(),
             true,
-            "",
+            Option::from(""),
             Method::GET,
         )
         .await
@@ -66,7 +66,7 @@ mod tests {
             "httpjhb://httpbin.org/get",
             "rusty".to_string(),
             true,
-            "",
+            Option::from(""),
             Method::GET,
         )
         .await

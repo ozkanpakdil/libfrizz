@@ -30,9 +30,13 @@ args:
       long: data
       help: <data> HTTP POST data
       takes_value: true
+  - fail:
+      short: f
+      long: fail
+      help: Fail silently (no output at all) on HTTP errors
   - output:
       short: o
-      long: outpu
+      long: output
       help: Write to file instead of stdout
       takes_value: true
   - verbose:

@@ -55,6 +55,10 @@ async fn main() -> Result<(), Error> {
             None => Box::new(io::stdout()) as Box<dyn Write>,
         };
 
+        if cmd_args.is_present("fail") && !res.status_code.contains("200") {
+            out_writer = Box::new(io::sink()) as Box<dyn Write>;
+        }
+
         out_writer
             .write(format!("{}", Colour::Green.paint(res.status_code)).as_bytes())
             .ok();
