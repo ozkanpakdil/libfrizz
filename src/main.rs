@@ -4,9 +4,9 @@ use std::{env, io};
 use ansi_term::Colour;
 use clap::{load_yaml, App};
 use dprint_core::formatting::PrintOptions;
+use reqwest::Method;
 use std::fs::File;
 use std::path::Path;
-use reqwest::Method;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -32,13 +32,19 @@ async fn main() -> Result<(), Error> {
 
         let method = match cmd_args.value_of("request") {
             Some(x) => Method::from_bytes(x.as_bytes()).unwrap(),
-            _ => Method::GET
+            _ => Method::GET,
         };
 
-        let res = libfrizz::execute_request(target, user_agent, verbose, "", method)
-            .await
-            .ok()
-            .unwrap();
+        let res = libfrizz::execute_request(
+            target,
+            user_agent,
+            verbose,
+            cmd_args.value_of("data"),
+            method,
+        )
+        .await
+        .ok()
+        .unwrap();
         let body = res.body;
 
         let mut out_writer = match cmd_args.value_of("output") {

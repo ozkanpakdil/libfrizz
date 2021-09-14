@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use reqwest::{Method, Request, RequestBuilder, Url};
+use reqwest::{Body, Method, Request, Url};
 
 pub struct FizzResult {
     pub status_code: String,
@@ -12,7 +12,7 @@ pub async fn execute_request(
     url: &str,
     user_agent: String,
     verbose: bool,
-    body: &str,
+    body: Option<&str>,
     method: Method,
 ) -> Result<FizzResult, reqwest::Error> {
     let client = reqwest::Client::builder()
@@ -20,7 +20,12 @@ pub async fn execute_request(
         .connection_verbose(verbose)
         .build()?;
 
-    let req = Request::new(method, Url::from_str(url).unwrap());
+    let mut req = Request::new(method, Url::from_str(url).unwrap());
+
+    if body.is_some() {
+        req.body_mut()
+            .replace(Body::from(String::from(body.unwrap())));
+    }
 
     let res = client.execute(req).await?;
 
@@ -40,9 +45,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_header() {
-        let res = execute_request("http://httpbin.org/get", "rusty".to_string(), true, "", Method::GET)
-            .await
-            .unwrap();
+        let res = execute_request(
+            "http://httpbin.org/get",
+            "rusty".to_string(),
+            true,
+            "",
+            Method::GET,
+        )
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
@@ -51,9 +62,15 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_get_header_error() {
-        let res = execute_request("httpjhb://httpbin.org/get", "rusty".to_string(), true, "", Method::GET)
-            .await
-            .unwrap();
+        let res = execute_request(
+            "httpjhb://httpbin.org/get",
+            "rusty".to_string(),
+            true,
+            "",
+            Method::GET,
+        )
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
