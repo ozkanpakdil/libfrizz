@@ -14,8 +14,8 @@ pub async fn execute_request(
     _verbose: bool,
     _disable_cert_validation: bool,
     _disable_hostname_validation: bool,
-    body: Option<&str>,
-    method: Method,
+    post_data: Option<&str>,
+    http_method: Method,
 ) -> Result<FizzResult, reqwest::Error> {
     let client = reqwest::Client::builder()
         .user_agent(user_agent)
@@ -24,11 +24,11 @@ pub async fn execute_request(
         .connection_verbose(_verbose)
         .build()?;
 
-    let mut req = Request::new(method, Url::from_str(url).unwrap());
+    let mut req = Request::new(http_method, Url::from_str(url).unwrap());
 
-    if body.is_some() {
+    if post_data.is_some() {
         req.body_mut()
-            .replace(Body::from(String::from(body.unwrap())));
+            .replace(Body::from(String::from(post_data.unwrap())));
     }
 
     let res = client.execute(req).await?;
@@ -58,8 +58,8 @@ mod tests {
             Option::from(""),
             Method::GET,
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
@@ -77,8 +77,8 @@ mod tests {
             Option::from(""),
             Method::GET,
         )
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
