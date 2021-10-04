@@ -58,8 +58,8 @@ mod tests {
             Option::from(""),
             Method::GET,
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
@@ -77,8 +77,8 @@ mod tests {
             Option::from(""),
             Method::GET,
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
