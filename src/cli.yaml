@@ -70,6 +70,10 @@ args:
       max_values: 2
       takes_value: true
       multiple: true
+  - progress-bar:
+      short: "#"
+      long: progress-bar
+      help: display transfer progress , https://github.com/kursatkobya/libfrizz/issues/26
 # subcommands:
 #     - test:
 #         about: controls testing features

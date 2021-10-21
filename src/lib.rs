@@ -1,15 +1,20 @@
-use reqwest::{Body, Method, Request, Url};
-use tokio::{io::{AsyncReadExt,AsyncWriteExt, Interest},
-            net::TcpStream
-};
-use std::{net::{IpAddr, SocketAddr},
-          time::Duration,
-          str::FromStr,
-          io,
-          io::{Error, Write},
-};
-use futures::{stream, StreamExt};
 use ansi_term::Colour;
+use futures::{stream, StreamExt};
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::{Body, Method, Request, Url};
+use std::cmp::min;
+use std::fs::File;
+use std::{
+    io,
+    io::{Error, Write},
+    net::{IpAddr, SocketAddr},
+    str::FromStr,
+    time::Duration,
+};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, Interest},
+    net::TcpStream,
+};
 
 pub struct FizzResult {
     pub status_code: String,
@@ -17,39 +22,76 @@ pub struct FizzResult {
     pub body: String,
 }
 
-pub async fn execute_request(
-    url: &str,
-    user_agent: String,
-    _verbose: bool,
-    _disable_cert_validation: bool,
-    _disable_hostname_validation: bool,
-    post_data: Option<&str>,
-    http_method: Method,
-) -> Result<FizzResult, reqwest::Error> {
+pub struct ExecRequest {
+    pub url: String,
+    pub user_agent: String,
+    pub verbose: bool,
+    pub disable_cert_validation: bool,
+    pub disable_hostname_validation: bool,
+    pub post_data: String,
+    pub http_method: Method,
+    pub progress_bar: bool,
+}
+
+pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::Error> {
     let client = reqwest::Client::builder()
-        .user_agent(user_agent)
-        .danger_accept_invalid_certs(_disable_cert_validation)
-        .danger_accept_invalid_hostnames(_disable_hostname_validation)
-        .connection_verbose(_verbose)
+        .user_agent(exec.user_agent)
+        .danger_accept_invalid_certs(exec.disable_cert_validation)
+        .danger_accept_invalid_hostnames(exec.disable_hostname_validation)
+        .connection_verbose(exec.verbose)
         .build()?;
 
-    let mut req = Request::new(http_method, Url::from_str(url).unwrap());
+    let mut req = Request::new(exec.http_method, Url::from_str(&exec.url).unwrap());
 
-    if post_data.is_some() {
-        req.body_mut()
-            .replace(Body::from(String::from(post_data.unwrap())));
+    if !exec.post_data.is_empty() {
+        req.body_mut().replace(Body::from(exec.post_data));
     }
 
-    let res = client.execute(req).await?;
+    let res = client.execute(req).await.unwrap();
+    let headers = res.headers().clone();
+    let status_code = res.status().to_string();
+    let content_length = res.content_length().unwrap();
+
+    if content_length > 104647460 || exec.progress_bar {
+        // if response content bigger then 100MB we download it with progress bar
+        let total_size = content_length;
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+            .progress_chars("#>-"));
+        pb.set_message(format!("Executing {}", exec.url));
+
+        let path = "frizz.out.file";
+        // download chunks
+        let mut file = File::create(path).unwrap();
+        let mut downloaded: u64 = 0;
+        let mut stream = res.bytes_stream();
+
+        while let Some(item) = stream.next().await {
+            let chunk = item?;
+            file.write_all(&chunk).unwrap();
+            let new = min(downloaded + (chunk.len() as u64), total_size);
+            downloaded = new;
+            pb.set_position(new);
+        }
+
+        pb.finish_with_message(format!("Downloaded {} to {}", exec.url, path));
+
+        return Ok(FizzResult {
+            status_code,
+            headers: format!("Headers:\n{:#?}", headers),
+            body: "written to file".to_string(),
+        });
+    }
 
     Ok(FizzResult {
-        status_code: res.status().to_string(),
-        headers: format!("Headers:\n{:#?}", res.headers()),
+        status_code,
+        headers: format!("Headers:\n{:#?}", headers),
         body: res.text().await?,
     })
 }
 
-pub async fn scan(target: IpAddr, concurrency: usize, timeout: u64, min_port:u16, max_port:u16) {
+pub async fn scan(target: IpAddr, concurrency: usize, timeout: u64, min_port: u16, max_port: u16) {
     let ports = stream::iter(min_port..=max_port);
 
     ports
@@ -61,7 +103,9 @@ async fn scan_port(target: IpAddr, port: u16, timeout: u64) {
     let timeout = Duration::from_secs(timeout);
     let socket_address = SocketAddr::new(target, port);
 
-    if let Ok(Ok(_)) = tokio::time::timeout(timeout, TcpStream::connect(&socket_address)).await { println!("{}", port) }
+    if let Ok(Ok(_)) = tokio::time::timeout(timeout, TcpStream::connect(&socket_address)).await {
+        println!("{}", port)
+    }
 }
 
 pub async fn open_socket_target(target: &str) -> Result<(), Error> {
@@ -102,15 +146,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_header() {
-        let res = execute_request(
-            "http://httpbin.org/get",
-            "rusty".to_string(),
-            true,
-            true,
-            true,
-            Option::from(""),
-            Method::GET,
-        )
+        let res = execute_request(ExecRequest {
+            url: "http://httpbin.org/get".to_string(),
+            user_agent: "rusty".to_string(),
+            verbose: true,
+            disable_cert_validation: true,
+            disable_hostname_validation: true,
+            post_data: "".to_string(),
+            http_method: Method::GET,
+            progress_bar: true,
+        })
         .await
         .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
@@ -121,15 +166,16 @@ mod tests {
     #[tokio::test]
     #[should_panic]
     async fn test_get_header_error() {
-        let res = execute_request(
-            "httpjhb://httpbin.org/get",
-            "rusty".to_string(),
-            true,
-            true,
-            true,
-            Option::from(""),
-            Method::GET,
-        )
+        let res = execute_request(ExecRequest {
+            url: "htasxatp://httpbin.org/get".to_string(),
+            user_agent: "rusty".to_string(),
+            verbose: true,
+            disable_cert_validation: true,
+            disable_hostname_validation: true,
+            post_data: "".to_string(),
+            http_method: Method::GET,
+            progress_bar: true,
+        })
         .await
         .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));

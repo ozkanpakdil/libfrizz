@@ -37,6 +37,8 @@ $FRIZZEXEC -v -t http://httpbin.org/get?test=2 -o test.txt
 $FRIZZEXEC -t https://localhost/static_response -X GET
 $FRIZZEXEC -v -t https://localhost/static_response -o test.txt
 $FRIZZEXEC -k -t https://localhost/static_response
+$FRIZZEXEC -# -t https://localhost/static_response
+$FRIZZEXEC --progress-bar -t https://localhost/static_response
 
 # TODO after https://github.com/kursatkobya/libfrizz/issues/21 basic authentication imlpementation we can enable tests below
 #curl -uBob:hiccup -kv https://localhost/secret/test
