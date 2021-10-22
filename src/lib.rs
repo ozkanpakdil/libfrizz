@@ -61,7 +61,10 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
             .progress_chars("#>-"));
         pb.set_message(format!("Executing {}", exec.url));
 
-        let path = "frizz.out.file";
+        let mut path = "frizz.out.file";
+        if exec.url.split('/').last().unwrap().chars().count() > 1 {
+            path = exec.url.split('/').last().unwrap();
+        };
         // download chunks
         let mut file = File::create(path).unwrap();
         let mut downloaded: u64 = 0;
@@ -80,7 +83,7 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
         return Ok(FizzResult {
             status_code,
             headers: format!("Headers:\n{:#?}", headers),
-            body: "written to file".to_string(),
+            body: format!("written to ./{}", path),
         });
     }
 
@@ -156,8 +159,8 @@ mod tests {
             http_method: Method::GET,
             progress_bar: true,
         })
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
@@ -176,8 +179,8 @@ mod tests {
             http_method: Method::GET,
             progress_bar: true,
         })
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
