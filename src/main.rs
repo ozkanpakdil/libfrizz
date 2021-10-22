@@ -38,10 +38,15 @@ async fn main() -> Result<(), Error> {
         format!("frizz / {}", frizz_version)
     };
 
-    let method = match cmd_args.value_of("request") {
+    let mut method = match cmd_args.value_of("request") {
         Some(x) => Method::from_bytes(x.as_bytes()).unwrap(),
         _ => Method::GET,
     };
+
+    // NOTE: if data given but method is GET, should be converted to POST
+    if method.eq(&Method::GET) && cmd_args.is_present("data") {
+        method = Method::POST;
+    }
 
     if target.starts_with("http") {
         execute_http(

@@ -5,7 +5,7 @@ use reqwest::{Body, Method, Request, Url};
 use std::cmp::min;
 use std::fs::File;
 use std::{
-    io,
+    fs, io,
     io::{Error, Write},
     net::{IpAddr, SocketAddr},
     str::FromStr,
@@ -44,13 +44,21 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
     let mut req = Request::new(exec.http_method, Url::from_str(&exec.url).unwrap());
 
     if !exec.post_data.is_empty() {
-        req.body_mut().replace(Body::from(exec.post_data));
+        let mut postdata = exec.post_data;
+        if postdata.starts_with('@') {
+            let file_name = postdata.split('@').last().unwrap();
+            log::info!("File opening for read:{}", file_name);
+            let contents =
+                fs::read(file_name).expect("Something went wrong reading the file");
+            unsafe { postdata = String::from_utf8_unchecked(contents); }
+        }
+        req.body_mut().replace(Body::from(postdata));
     }
 
     let res = client.execute(req).await.unwrap();
     let headers = res.headers().clone();
     let status_code = res.status().to_string();
-    let content_length = res.content_length().unwrap();
+    let content_length = res.content_length().unwrap_or(0);
 
     if content_length > 104647460 || exec.progress_bar {
         // if response content bigger then 100MB we download it with progress bar
@@ -159,8 +167,8 @@ mod tests {
             http_method: Method::GET,
             progress_bar: true,
         })
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
@@ -179,8 +187,8 @@ mod tests {
             http_method: Method::GET,
             progress_bar: true,
         })
-            .await
-            .unwrap();
+        .await
+        .unwrap();
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
