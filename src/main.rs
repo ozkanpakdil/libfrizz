@@ -1,5 +1,5 @@
 use ansi_term::Colour;
-use clap::{load_yaml, App, ArgMatches};
+use clap::{load_yaml, App};
 use dprint_core::formatting::PrintOptions;
 use libfrizz::ExecRequest;
 use reqwest::Method;
@@ -48,16 +48,57 @@ async fn main() -> Result<(), Error> {
         method = Method::POST;
     }
 
+    let mut out_writer = match cmd_args.value_of("output") {
+        Some(x) => {
+            let path = Path::new(x);
+            Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+        }
+        None => Box::new(io::stdout()) as Box<dyn Write>,
+    };
+
     if target.starts_with("http") {
-        execute_http(
-            cmd_args.clone(),
-            insecure,
-            verbose,
-            target,
+        let res = libfrizz::execute_request(ExecRequest {
+            url: target.to_string(),
             user_agent,
-            method,
-        )
+            verbose,
+            disable_cert_validation: insecure,
+            disable_hostname_validation: insecure,
+            post_data: cmd_args.value_of("data").unwrap_or("").to_string(),
+            http_method: method,
+            progress_bar: cmd_args.is_present("progress-bar"),
+        })
         .await
+        .unwrap();
+        let body = res.body;
+
+        if cmd_args.is_present("fail") && !res.status_code.contains("200") {
+            out_writer = Box::new(io::sink()) as Box<dyn Write>;
+        }
+
+        out_writer
+            .write(format!("{}", Colour::Green.paint(res.status_code)).as_bytes())
+            .ok();
+        if cmd_args.is_present("dump-header") {
+            out_writer
+                .write(format!("{}", Colour::Blue.paint(res.headers)).as_bytes())
+                .ok();
+        }
+
+        if cmd_args.is_present("pretty") {
+            let opts = PrintOptions {
+                indent_width: 4,
+                max_width: 10,
+                use_tabs: false,
+                new_line_text: "\n",
+            };
+            let items = dprint_core::formatting::parser_helpers::parse_string(body.as_str());
+            let out_prep = Colour::White.paint(dprint_core::formatting::format(|| items, opts));
+            out_writer.write(out_prep.as_bytes()).ok();
+        } else {
+            out_writer
+                .write(format!("{}", Colour::White.paint(body)).as_bytes())
+                .ok();
+        }
     } else if cmd_args.is_present("scan") {
         let socket_addresses: Vec<SocketAddr> =
             format!("{}:0", target).to_socket_addrs()?.collect();
@@ -97,7 +138,7 @@ async fn main() -> Result<(), Error> {
             timeout,
             cmp::min(port1, port2),
             cmp::max(port1, port2),
-            cmd_args.value_of("output").unwrap_or("")
+            out_writer,
         )
         .await;
         return Ok(());
@@ -107,65 +148,4 @@ async fn main() -> Result<(), Error> {
     }
 
     Ok(())
-}
-
-async fn execute_http(
-    cmd_args: ArgMatches<'_>,
-    insecure: bool,
-    verbose: bool,
-    target: &str,
-    user_agent: String,
-    method: Method,
-) {
-    let res = libfrizz::execute_request(ExecRequest {
-        url: target.to_string(),
-        user_agent,
-        verbose,
-        disable_cert_validation: insecure,
-        disable_hostname_validation: insecure,
-        post_data: cmd_args.value_of("data").unwrap_or("").to_string(),
-        http_method: method,
-        progress_bar: cmd_args.is_present("progress-bar"),
-    })
-    .await
-    .ok()
-    .unwrap();
-    let body = res.body;
-
-    let mut out_writer = match cmd_args.value_of("output") {
-        Some(x) => {
-            let path = Path::new(x);
-            Box::new(File::create(&path).unwrap()) as Box<dyn Write>
-        }
-        None => Box::new(io::stdout()) as Box<dyn Write>,
-    };
-
-    if cmd_args.is_present("fail") && !res.status_code.contains("200") {
-        out_writer = Box::new(io::sink()) as Box<dyn Write>;
-    }
-
-    out_writer
-        .write(format!("{}", Colour::Green.paint(res.status_code)).as_bytes())
-        .ok();
-    if cmd_args.is_present("dump-header") {
-        out_writer
-            .write(format!("{}", Colour::Blue.paint(res.headers)).as_bytes())
-            .ok();
-    }
-
-    if cmd_args.is_present("pretty") {
-        let opts = PrintOptions {
-            indent_width: 4,
-            max_width: 10,
-            use_tabs: false,
-            new_line_text: "\n",
-        };
-        let items = dprint_core::formatting::parser_helpers::parse_string(body.as_str());
-        let out_prep = Colour::White.paint(dprint_core::formatting::format(|| items, opts));
-        out_writer.write(out_prep.as_bytes()).ok();
-    } else {
-        out_writer
-            .write(format!("{}", Colour::White.paint(body)).as_bytes())
-            .ok();
-    }
 }

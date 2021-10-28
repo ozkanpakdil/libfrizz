@@ -6,8 +6,11 @@ case "${unameOut}" in
     Darwin*)    FRIZZEXEC=./frizz;;
     *)          machine="UNKNOWN:${unameOut}"
 esac
-# install caddy
-curl -sS https://webinstall.dev/caddy | bash
+if ! command -v caddy version &> /dev/null
+then
+    # install caddy
+    curl -sS https://webinstall.dev/caddy | bash
+fi
 
 caddy run &
 
@@ -34,11 +37,12 @@ $FRIZZEXEC -t http://httpbin.org/put?test=2 -X PUT
 $FRIZZEXEC -v -t http://httpbin.org/get?test=2 -o test.txt
 
 # caddy local tests
-$FRIZZEXEC -t https://localhost/static_response -X GET
-$FRIZZEXEC -v -t https://localhost/static_response -o test.txt
+$FRIZZEXEC -k -t https://localhost/static_response -X GET
+$FRIZZEXEC -kv -t https://localhost/static_response -o test.txt
 $FRIZZEXEC -k -t https://localhost/static_response
-$FRIZZEXEC -# -t https://localhost/static_response
-$FRIZZEXEC --progress-bar -t https://localhost/static_response
+$FRIZZEXEC -k -# -t https://localhost/static_response
+$FRIZZEXEC -k --progress-bar -t https://localhost/static_response
+$FRIZZEXEC -s -t localhost --ports 80 1024
 
 # TODO after https://github.com/kursatkobya/libfrizz/issues/21 basic authentication imlpementation we can enable tests below
 #curl -uBob:hiccup -kv https://localhost/secret/test

@@ -1,5 +1,5 @@
 use ansi_term::Colour;
-use futures::{stream, StreamExt, lock::Mutex};
+use futures::{lock::Mutex, stream, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::{Body, Method, Request, Url};
 use std::cmp::min;
@@ -9,10 +9,9 @@ use std::{
     io::{Error, Write},
     net::{IpAddr, SocketAddr},
     str::FromStr,
-    time::Duration,
     sync::Arc,
+    time::Duration,
     time::Instant,
-    path::Path,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Interest},
@@ -51,9 +50,10 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
         if postdata.starts_with('@') {
             let file_name = postdata.split('@').last().unwrap();
             log::info!("File opening for read:{}", file_name);
-            let contents =
-                fs::read(file_name).expect("Something went wrong reading the file");
-            unsafe { postdata = String::from_utf8_unchecked(contents); }
+            let contents = fs::read(file_name).expect("Something went wrong reading the file");
+            unsafe {
+                postdata = String::from_utf8_unchecked(contents);
+            }
         }
         req.body_mut().replace(Body::from(postdata));
     }
@@ -105,12 +105,19 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
     })
 }
 
-pub async fn scan(target: IpAddr, concurrency: usize, timeout: u64, min_port: u16, max_port: u16, out:&str) {
+pub async fn scan(
+    target: IpAddr,
+    concurrency: usize,
+    timeout: u64,
+    min_port: u16,
+    max_port: u16,
+    mut out_writer: Box<dyn Write>,
+) {
     let ports = stream::iter(min_port..=max_port);
     let output_values = Arc::new(Mutex::new(Vec::new()));
     let before = Instant::now();
 
-    let pb = ProgressBar::new((max_port-min_port).into());
+    let pb = ProgressBar::new((max_port - min_port).into());
     pb.set_style(ProgressStyle::default_bar()
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos:>}/{len}  ({percent}%, {eta})")
         .progress_chars("##-"));
@@ -126,17 +133,11 @@ pub async fn scan(target: IpAddr, concurrency: usize, timeout: u64, min_port: u1
                     output_values.lock().await.push(result);
                 }
             }
-        }).await;
+        })
+        .await;
 
-    let mut out_writer = if out.is_empty() {
-        Box::new(io::stdout()) as Box<dyn Write>
-    }
-    else {
-        let path = Path::new(out);
-        Box::new(File::create(&path).unwrap()) as Box<dyn Write>
-    };
     pb.finish();
-    for i in output_values.lock().await.iter(){
+    for i in output_values.lock().await.iter() {
         out_writer
             .write(Colour::Blue.paint(format!("{:?}\n", i)).as_bytes())
             .ok();
@@ -145,7 +146,7 @@ pub async fn scan(target: IpAddr, concurrency: usize, timeout: u64, min_port: u1
     println!("Elapsed time to scan ports: {:.2?}", before.elapsed());
 }
 
-async fn scan_port(target: IpAddr, port: u16, timeout: u64)-> u16 {
+async fn scan_port(target: IpAddr, port: u16, timeout: u64) -> u16 {
     let timeout = Duration::from_secs(timeout);
     let socket_address = SocketAddr::new(target, port);
 
