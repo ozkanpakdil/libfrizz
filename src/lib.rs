@@ -5,7 +5,7 @@ mod port_details;
 use ansi_term::Colour;
 use futures::{lock::Mutex, stream, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::{Body, Method, Request, Url};
+use reqwest::{Body, Client, Method, Request, Url};
 use std::cmp::min;
 use std::fs::File;
 use std::{
@@ -21,6 +21,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Interest},
     net::TcpStream,
 };
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum TransportLayerProtocol {
@@ -47,6 +48,67 @@ pub struct ExecRequest {
     pub progress_bar: bool,
 }
 
+pub async fn upload_file(
+    url: String,
+    path: String,
+    client: Client,
+    http_method: Method,
+) -> Result<FizzResult, reqwest::Error> {
+    let file = tokio::fs::File::open(path).await.unwrap();
+    let total_size = file.metadata().await.unwrap().len();
+    let target_url = url.clone();
+
+    // Indicatif setup
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+        .progress_chars("#>-"));
+    pb.set_message(format!("Posting {}", url));
+
+    let mut uploaded = 0;
+
+    let mut reader_stream = FramedRead::new(file, BytesCodec::new());
+    let async_stream = async_stream::stream! {
+        while let Some(chunk) = reader_stream.next().await {
+            if let Ok(chunk) = &chunk {
+                let new = min(uploaded + (chunk.len() as u64), total_size);
+                uploaded = new;
+                pb.set_position(new);
+            }
+            yield chunk;
+        }
+        pb.finish_with_message(format!("Upload finished."));
+    };
+    let response = match http_method {
+        Method::POST => {
+            client
+                .post(target_url)
+                .body(Body::wrap_stream(async_stream))
+                .send()
+                .await
+        }
+        Method::PUT => {
+            client
+                .put(target_url)
+                .body(Body::wrap_stream(async_stream))
+                .send()
+                .await
+        }
+        _ => panic!("Can not upload the file with httpMethod:{}", http_method),
+    }
+    .unwrap();
+
+    let headers = response.headers().clone();
+    let status_code = response.status().to_string();
+    let result_text = response.text().await?;
+
+    return Ok(FizzResult {
+        status_code,
+        headers: format!("Headers:\n{:#?}", headers),
+        body: result_text,
+    });
+}
+
 pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::Error> {
     let client = reqwest::Client::builder()
         .user_agent(exec.user_agent)
@@ -55,13 +117,26 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
         .connection_verbose(exec.verbose)
         .build()?;
 
-    let mut req = Request::new(exec.http_method, Url::from_str(&exec.url).unwrap());
+    let mut req = Request::new(exec.http_method.clone(), Url::from_str(&exec.url).unwrap());
 
     if !exec.post_data.is_empty() {
         let mut postdata = exec.post_data;
         if postdata.starts_with('@') {
             let file_name = postdata.split('@').last().unwrap();
             log::info!("File opening for read:{}", file_name);
+            let file_size = fs::metadata(file_name).unwrap().len();
+
+            if file_size > 1_000_000 {
+                // if file size bigger then 1mb
+                return upload_file(
+                    exec.url,
+                    String::from(file_name).clone(),
+                    client,
+                    exec.http_method,
+                )
+                .await;
+            }
+
             let contents = fs::read(file_name).expect("Something went wrong reading the file");
             unsafe {
                 postdata = String::from_utf8_unchecked(contents);
@@ -75,8 +150,8 @@ pub async fn execute_request(exec: ExecRequest) -> Result<FizzResult, reqwest::E
     let status_code = res.status().to_string();
     let content_length = res.content_length().unwrap_or(0);
 
-    if content_length > 104647460 || exec.progress_bar {
-        // if response content bigger then 100MB we download it with progress bar
+    if content_length > 1_000_000 || exec.progress_bar {
+        // if response content bigger then 1MB we download it with progress bar
         let total_size = content_length;
         let pb = ProgressBar::new(total_size);
         pb.set_style(ProgressStyle::default_bar()
@@ -244,9 +319,48 @@ pub async fn open_socket_target(target: &str) -> Result<(), Error> {
 #[allow(non_snake_case)]
 mod tests {
     use ansi_term::Colour;
+    use std::path::Path;
 
     use super::*;
     use rstest::rstest;
+
+    #[tokio::test]
+    async fn test_download_upload_big_file() {
+        println!("download is starting.");
+        execute_request(ExecRequest {
+            url:
+                "https://github.com/ozkanpakdil/rust-examples/files/7689196/s.zip"
+                    .to_string(),
+            user_agent: "frizz".to_string(),
+            verbose: true,
+            disable_cert_validation: true,
+            disable_hostname_validation: true,
+            post_data: "".to_string(),
+            http_method: Method::GET,
+            progress_bar: true,
+        })
+        .await
+        .unwrap();
+        println!("download finished.");
+        if !Path::new("s.zip").is_file() {
+            panic!("s.zip not found, fail.");
+        }
+
+        execute_request(ExecRequest {
+            url: "https://bashupload.com/nasa.xml".to_string(),
+            user_agent: "frizz".to_string(),
+            verbose: false,
+            disable_cert_validation: true,
+            disable_hostname_validation: true,
+            post_data: "".to_string(),
+            http_method: Method::POST,
+            progress_bar: true,
+        })
+        .await
+        .unwrap();
+        println!("upload finished.");
+        fs::remove_file("s.zip").unwrap();
+    }
 
     #[tokio::test]
     async fn test_get_header() {
@@ -265,6 +379,7 @@ mod tests {
         println!("{}", Colour::Red.paint(res.status_code));
         println!("{}", Colour::Green.paint(res.headers));
         println!("{}", Colour::Blue.paint(res.body));
+        fs::remove_file("./get").unwrap();
     }
 
     #[tokio::test]

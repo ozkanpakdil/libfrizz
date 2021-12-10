@@ -35,6 +35,11 @@ $FRIZZEXEC -v -t http://httpbin.org/head?test=2 -X HEAD
 $FRIZZEXEC -t http://httpbin.org/put?test=2 -X PUT
 #writing to file
 $FRIZZEXEC -v -t http://httpbin.org/get?test=2 -o test.txt
+#download file test
+$FRIZZEXEC -t https://github.com/ozkanpakdil/rust-examples/files/7689196/s.zip -#
+#upload file test
+$FRIZZEXEC -t https://bashupload.com/s.zip -# -d @s.zip
+rm s.zip
 
 # caddy local tests
 $FRIZZEXEC -k -t https://localhost/static_response -X GET

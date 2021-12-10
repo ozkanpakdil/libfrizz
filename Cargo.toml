@@ -21,6 +21,8 @@ futures = "0.3.17"
 indicatif = "0.16.2"
 lazy_static = "1.4.0"
 rstest = "0.11.0"
+async-stream = "0.3.2"
+tokio-util = "0.6.9"
 
 [dev-dependencies]
 serial_test = "0.5.1"
