@@ -347,7 +347,7 @@ mod tests {
         }
 
         execute_request(ExecRequest {
-            url: "https://bashupload.com/nasa.xml".to_string(),
+            url: "https://bashupload.com/s.zip".to_string(),
             user_agent: "frizz".to_string(),
             verbose: false,
             disable_cert_validation: true,
