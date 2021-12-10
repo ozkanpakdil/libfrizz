@@ -2,7 +2,7 @@ use ansi_term::Colour;
 use clap::{load_yaml, App};
 use dprint_core::formatting::PrintOptions;
 use libfrizz::ExecRequest;
-use reqwest::Method;
+use reqwest::{Method, Url};
 use std::{
     cmp, env,
     fs::File,
@@ -11,6 +11,7 @@ use std::{
     net::{SocketAddr, ToSocketAddrs},
     path::Path,
 };
+use std::process::exit;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -57,6 +58,13 @@ async fn main() -> Result<(), Error> {
     };
 
     if target.starts_with("http") {
+        match Url::parse(target) {
+            Err(e) => {
+                println!("Exiting because wrong url({}) and the reason is \"{}\".",target, e);
+                exit(0);
+            },
+            _ => {log::debug!("url is okay.")}
+        }
         let res = libfrizz::execute_request(ExecRequest {
             url: target.to_string(),
             user_agent,
@@ -67,8 +75,8 @@ async fn main() -> Result<(), Error> {
             http_method: method,
             progress_bar: cmd_args.is_present("progress-bar"),
         })
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         let body = res.body;
 
         if cmd_args.is_present("fail") && !res.status_code.contains("200") {
@@ -150,7 +158,7 @@ async fn main() -> Result<(), Error> {
             proto_opt,
             out_writer,
         )
-        .await;
+            .await;
         return Ok(());
     } else {
         // assume telnet or any socket protocol

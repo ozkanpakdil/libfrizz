@@ -328,9 +328,7 @@ mod tests {
     async fn test_download_upload_big_file() {
         println!("download is starting.");
         execute_request(ExecRequest {
-            url:
-                "https://github.com/ozkanpakdil/rust-examples/files/7689196/s.zip"
-                    .to_string(),
+            url: "https://github.com/ozkanpakdil/rust-examples/files/7689196/s.zip".to_string(),
             user_agent: "frizz".to_string(),
             verbose: true,
             disable_cert_validation: true,
