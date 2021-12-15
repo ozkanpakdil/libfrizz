@@ -30,6 +30,7 @@ regex = "1.5.4"
 chrono = "0.4.19"
 strum_macros = "0.23.1"
 strum = "0.23.0"
+itertools = "0.10.3"
 
 [dev-dependencies]
 serial_test = "0.5.1"

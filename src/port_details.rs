@@ -145,15 +145,26 @@ async fn download_overwrite(home: String, service_file: &str) {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod tests {
+    use futures::executor;
+
     use super::*;
 
     #[test]
     fn test() {
-        get_details();
-        get_most_common_ports_with_name(TransportLayerProtocol::Sctp);
+        println!("....");
     }
+
     #[tokio::test]
     async fn async_test() {
         init().await;
+        get_details();
+        let m1 = get_most_common_ports_with_name(TransportLayerProtocol::Sctp);
+        let m2 = get_most_common_ports_with_name(TransportLayerProtocol::Tcp);
+        let m3 = get_most_common_ports_with_name(TransportLayerProtocol::Udp);
+        println!("m1:{} m2:{} m3:{}", m1.len(), m2.len(), m3.len());
+        let v1 = get_most_common_ports(TransportLayerProtocol::Sctp);
+        let v2 = get_most_common_ports(TransportLayerProtocol::Tcp);
+        let v3 = get_most_common_ports(TransportLayerProtocol::Udp);
+        println!("v1:{} v2:{} v3:{}", v1.len(), v2.len(), v3.len());
     }
 }

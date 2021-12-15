@@ -3,6 +3,7 @@ mod port_details;
 use ansi_term::Colour;
 use futures::{lock::Mutex, stream, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use port_details::*;
 use reqwest::{Body, Client, Method, Request, Url};
 use std::cmp::min;
@@ -19,6 +20,7 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Interest},
     net::TcpStream,
+    net::UdpSocket,
 };
 use tokio_util::codec::{BytesCodec, FramedRead};
 
@@ -196,13 +198,24 @@ fn get_ports(
     max_port: u16,
     tl_protocol: TransportLayerProtocol,
 ) -> (Box<dyn Iterator<Item = u16>>, u16) {
-    if tl_protocol == TransportLayerProtocol::None {
+    if min_port != max_port {
+        // ports present we scan only that area.
         (Box::new(min_port..=max_port), max_port - min_port)
-    } else {
+    } else if tl_protocol != TransportLayerProtocol::None {
+        // if no port present and protocol given, scan common only for that protocol
         (
             Box::new(get_most_common_ports(tl_protocol).into_iter()),
             get_most_common_ports(tl_protocol).len() as u16,
         )
+    } else {
+        // no port given nor layer protocol, scan all common ports
+        let mut all_ports = get_most_common_ports(TransportLayerProtocol::Sctp);
+        all_ports.append(&mut get_most_common_ports(TransportLayerProtocol::Tcp));
+        all_ports.append(&mut get_most_common_ports(TransportLayerProtocol::Udp));
+        all_ports = all_ports.into_iter().unique().collect();
+
+        let count = all_ports.len();
+        (Box::new(all_ports.into_iter()), count as u16)
     }
 }
 
@@ -235,7 +248,7 @@ pub async fn scan(
             let output_values = output_values.clone();
             pb.inc(1);
             async move {
-                let result = scan_port(target, port, timeout).await;
+                let result = scan_port(target, port, timeout, tl_protocol).await;
                 if result > 0 {
                     output_values.lock().await.push(result);
                 }
@@ -266,14 +279,41 @@ pub async fn scan(
     println!("Elapsed time to scan ports: {:.2?}", before.elapsed());
 }
 
-async fn scan_port(target: IpAddr, port: u16, timeout: u64) -> u16 {
+async fn scan_port(
+    target: IpAddr,
+    port: u16,
+    timeout: u64,
+    protocol: TransportLayerProtocol,
+) -> u16 {
     let timeout = Duration::from_secs(timeout);
     let socket_address = SocketAddr::new(target, port);
 
-    if let Ok(Ok(_)) = tokio::time::timeout(timeout, TcpStream::connect(&socket_address)).await {
-        return port;
-    }
-    0
+    return match protocol {
+        TransportLayerProtocol::None
+        | TransportLayerProtocol::Sctp
+        | TransportLayerProtocol::Tcp => {
+            if let Ok(Ok(_)) =
+                tokio::time::timeout(timeout, TcpStream::connect(&socket_address)).await
+            {
+                return port;
+            }
+            0
+        }
+        TransportLayerProtocol::Udp => {
+            if let Ok(Ok(_)) = tokio::time::timeout(
+                timeout,
+                UdpSocket::bind("127.0.0.1:0")
+                    .await
+                    .expect("could not bind to address")
+                    .connect(&socket_address),
+            )
+            .await
+            {
+                return port;
+            }
+            0
+        }
+    };
 }
 
 pub async fn open_socket_target(target: &str) -> Result<(), Error> {
