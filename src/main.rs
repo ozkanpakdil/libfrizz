@@ -3,6 +3,7 @@ use clap::{load_yaml, App};
 use dprint_core::formatting::PrintOptions;
 use libfrizz::{execute_request, ExecRequest, TransportLayerProtocol};
 use reqwest::{Method, Url};
+use std::fs;
 use std::process::exit;
 use std::{
     cmp, env,
@@ -84,10 +85,16 @@ async fn main() -> Result<(), Error> {
                 log::debug!("url is okay.")
             }
         }
-        let _post_data = cmd_args
-            .value_of("data")
-            .unwrap_or_else(|| cmd_args.value_of("upload-file").unwrap_or(""))
-            .to_string();
+        let mut _post_data = cmd_args.value_of("data").unwrap_or("").to_string();
+        if cmd_args.is_present("upload-file") {
+            let upload_file = cmd_args.value_of("upload-file").unwrap_or("");
+            if fs::metadata(upload_file).unwrap().is_file() {
+                _post_data = format!("@{}", upload_file);
+            } else {
+                log::error!("File not found,{}", upload_file);
+                exit(-1);
+            }
+        }
         let res = execute_request(ExecRequest {
             url: target.to_string(),
             user_agent,
