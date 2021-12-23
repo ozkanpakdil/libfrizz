@@ -81,7 +81,7 @@ pub async fn init() {
     let home = format!("{}/.frizz/", &s);
     let service_file = format!("{}/.frizz/nmap-services", &s);
     if !Path::exists(service_file.as_ref()) {
-        // download the file it does not exist
+        // download the file if it does not exist
         download_overwrite(home, &service_file).await;
     } else {
         static APP_USER_AGENT: &str =
@@ -105,6 +105,11 @@ pub async fn init() {
         .text()
         .await;
         let resp = response.unwrap();
+        if resp.contains("limit exceeded") {
+            //exceeded limit, it will reset after 1 hour
+            log::warn!("Could not query the github api, reason is {}", resp);
+            return;
+        }
         let v: Value = serde_json::from_str(resp.as_str()).unwrap();
         let r = jql::walker(&v, Some(query));
         let file_date_in_git = DateTime::parse_from_rfc3339(r.unwrap().as_str().unwrap()).unwrap();

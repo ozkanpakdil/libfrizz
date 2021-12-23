@@ -30,6 +30,11 @@ args:
       long: data
       help: <data> HTTP POST data
       takes_value: true
+  - upload-file:
+      short: T
+      long: upload-file
+      help: <data> HTTP PUT data
+      takes_value: true
   - fail:
       short: f
       long: fail
@@ -66,8 +71,8 @@ args:
       short: p
       long: ports
       help: Ports to scan between given two numbers
-      min_values: 2
-      max_values: 2
+      min_values: 0
+      max_values: 65535
       takes_value: true
       multiple: true
   - udp:

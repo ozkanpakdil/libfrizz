@@ -431,9 +431,9 @@ mod tests {
     }
 
     #[rstest]
-    #[case(0, 0, TransportLayerProtocol::Tcp)]
-    #[case(0, 1, TransportLayerProtocol::Udp)]
-    #[case(0, 2, TransportLayerProtocol::Sctp)]
+    #[case(0, 10, TransportLayerProtocol::Tcp)]
+    #[case(0, 21, TransportLayerProtocol::Udp)]
+    #[case(0, 32, TransportLayerProtocol::Sctp)]
     #[case(10, 100, TransportLayerProtocol::None)]
     fn test_get_ports(
         #[case] min_p: u16,
@@ -441,13 +441,7 @@ mod tests {
         #[case] proto: TransportLayerProtocol,
     ) {
         let (_port_box, progress_size) = get_ports(min_p, max_p, proto);
-
         match proto {
-            TransportLayerProtocol::Tcp
-            | TransportLayerProtocol::Udp
-            | TransportLayerProtocol::Sctp => {
-                assert_eq!(progress_size, get_most_common_ports(proto).len() as u16);
-            }
             _ => assert_eq!(progress_size, max_p - min_p),
         }
     }

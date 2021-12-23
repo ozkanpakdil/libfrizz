@@ -31,9 +31,16 @@ async fn main() -> Result<(), Error> {
     let insecure = cmd_args.is_present("insecure");
     let verbose = cmd_args.is_present("verbose");
     if verbose {
-        simple_logger::init().unwrap();
+        simple_logger::SimpleLogger::new()
+            .with_utc_timestamps()
+            .init()
+            .unwrap();
     } else {
-        simple_logger::init_with_level(log::Level::Info).unwrap();
+        simple_logger::SimpleLogger::new()
+            .with_utc_timestamps()
+            .with_level(log::LevelFilter::Info)
+            .init()
+            .unwrap();
     }
     port_details::init().await;
     let user_agent = if cmd_args.is_present("user-agent") {
@@ -50,6 +57,10 @@ async fn main() -> Result<(), Error> {
     // NOTE: if data given but method is GET, should be converted to POST
     if method.eq(&Method::GET) && cmd_args.is_present("data") {
         method = Method::POST;
+    }
+    if cmd_args.is_present("upload-file") {
+        method = Method::PUT;
+        log::debug!("method SET PUT.")
     }
 
     let mut out_writer = match cmd_args.value_of("output") {
@@ -73,13 +84,17 @@ async fn main() -> Result<(), Error> {
                 log::debug!("url is okay.")
             }
         }
+        let _post_data = cmd_args
+            .value_of("data")
+            .unwrap_or_else(|| cmd_args.value_of("upload-file").unwrap_or(""))
+            .to_string();
         let res = execute_request(ExecRequest {
             url: target.to_string(),
             user_agent,
             verbose,
             disable_cert_validation: insecure,
             disable_hostname_validation: insecure,
-            post_data: cmd_args.value_of("data").unwrap_or("").to_string(),
+            post_data: _post_data,
             http_method: method,
             progress_bar: cmd_args.is_present("progress-bar"),
         })
