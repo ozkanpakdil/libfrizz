@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2018"
 authors = ["{{authors}}"]
 description = "curl alternative written in rust."
-license = "MIT OR Apache-2.0"
+license = "MIT OR Apache-2.0 OR GPL-3"
 readme = "README.md"
 
 [lib]
