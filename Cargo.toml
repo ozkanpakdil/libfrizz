@@ -3,6 +3,9 @@ name = "frizz"
 version = "0.2.0"
 edition = "2018"
 authors = ["{{authors}}"]
+description = "curl alternative written in rust."
+license = "LICENSE"
+readme = "README.md"
 
 [lib]
 name = "libfrizz"
@@ -35,4 +38,14 @@ itertools = "0.10.3"
 [dev-dependencies]
 serial_test = "0.5.1"
 
-
+[package.metadata.deb]
+maintainer = "Ozkan Pakdil <ozkan.pakdil+frizz@gmail.com>"
+copyright = "2022, Ozkan Pakdil <ozkan.pakdil+frizz@gmail.com>"
+license-file = ["LICENSE", "4"]
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/frizz", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/cargo-deb/README", "644"],
+]

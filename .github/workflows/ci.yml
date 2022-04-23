@@ -7,6 +7,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install dependencies
+        run: sudo apt-get install alien build-essential fakeroot devscripts
+      - name: Generate release tag
+        id: tag
+        run: |
+          VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`
+          echo "::set-output name=release_tag::$VERSION-${{github.run_number}}"
       - uses: actions/checkout@v1
       - uses: actions/cache@v2
         with:
@@ -23,3 +30,16 @@ jobs:
           source $HOME/.cargo/env
           cd test-suite
           ./run-tests.sh
+          cargo install cargo-deb
+          cargo deb
+          DEBFILE=`find -name *.deb`
+          sudo alien --nopatch -r $DEBFILE
+      - name: Release with Notes
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.deb
+            *.rpm
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

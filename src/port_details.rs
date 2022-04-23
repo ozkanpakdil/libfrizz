@@ -111,7 +111,7 @@ pub async fn init() {
             return;
         }
         let v: Value = serde_json::from_str(resp.as_str()).unwrap();
-        let r = jql::walker(&v, Some(query));
+        let r = jql::walker(&v, query);
         let file_date_in_git = DateTime::parse_from_rfc3339(r.unwrap().as_str().unwrap()).unwrap();
         log::debug!("file last modified in git:{:?}", file_date_in_git);
 
