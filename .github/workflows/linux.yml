@@ -9,11 +9,6 @@ jobs:
     steps:
       - name: Install dependencies
         run: sudo apt-get install alien build-essential fakeroot devscripts
-      - name: Generate release tag
-        id: tag
-        run: |
-          VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`
-          echo "::set-output name=release_tag::$VERSION-${{github.run_number}}"
       - uses: actions/checkout@v1
       - uses: actions/cache@v2
         with:
@@ -24,6 +19,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Generate release tag
+        id: tag
+        run: |
+          VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`
+          echo "::set-output name=release_tag::$VERSION-${{github.run_number}}"
       - name: Run rust/cargo stuff
         run: |
           VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`-${{github.run_number}}
