@@ -46,7 +46,7 @@ jobs:
           cargo install --force cargo-deb
           cargo deb --deb-version ${{ steps.tag.outputs.release_tag }}
           DEBFILE=`find -name *.deb`
-          sudo alien --nopatch -r $DEBFILE
+          sudo alien --nopatch -rk $DEBFILE
           mv $DEBFILE .
 
       - name: build msi
@@ -65,7 +65,8 @@ jobs:
           set -x
           cargo build --release
           cargo build --target x86_64-apple-darwin
-          hdiutil create frizz-${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/ -ov
+          find target/x86_64-apple-darwin/
+          hdiutil create frizz-${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/frizz -ov
 
       - name: Release with Notes
         uses: softprops/action-gh-release@v1
