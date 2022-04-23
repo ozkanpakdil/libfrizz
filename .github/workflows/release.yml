@@ -47,7 +47,7 @@ jobs:
           cargo deb --deb-version ${{ steps.tag.outputs.release_tag }}
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
-          find target/debian/
+          mv $DEBFILE .
 
       - name: build msi
         if: matrix.os == 'windows-latest'
@@ -57,6 +57,7 @@ jobs:
           cargo wix --version
           cargo wix init
           cargo wix --output ./target/wix/frizz.msi
+          mv ./target/wix/frizz.msi .
 
       - name: build dmg
         if: matrix.os == 'macos-latest'
@@ -64,7 +65,8 @@ jobs:
           set -x
           cargo build --release
           cargo build --target x86_64-apple-darwin
-          find target/x86_64-apple-darwin/
+          DMGFILE=`find -name *.dmg target/x86_64-apple-darwin/`
+          mv $DMGFILE .
 
       - name: Release with Notes
         uses: softprops/action-gh-release@v1
