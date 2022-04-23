@@ -1,14 +1,19 @@
-name: Frizz ci linux
+name: Frizz ci
 
 on: [ push ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Install dependencies
+        if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install alien build-essential fakeroot devscripts
+
       - uses: actions/checkout@v1
       - uses: actions/cache@v2
         with:
@@ -30,18 +35,38 @@ jobs:
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           source $HOME/.cargo/env
           ./test-suite/run-tests.sh
+
+      - name: build deb,rpm
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          set -x
           cargo build --release
           cargo install cargo-deb
           cargo deb --deb-version $VERSION
-          set -x
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
+
+      - name: build msi
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo install cargo-wix
+          cargo wix --version
+          cargo wix --no-build --nocapture --output ./target/wix/frizz.msi
+
+      - name: build msi
+        if: matrix.os == 'macos-latest'
+        run: |
+          set -x
+          cargo build --target x86_64-apple-darwin
+
       - name: Release with Notes
         uses: softprops/action-gh-release@v1
         with:
           files: |
             *.deb
             *.rpm
+            *.msi
           tag_name: ${{ steps.tag.outputs.release_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
