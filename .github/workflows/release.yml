@@ -11,6 +11,12 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         rust: [nightly, stable]
     steps:
+      - name: Install Wix
+        if: matrix.build == 'windows-latest'
+        uses: actions/checkout@v2
+        with:
+          repository: fbarresi/wix
+          path: wix
       - name: Install dependencies
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install alien build-essential fakeroot devscripts
@@ -37,7 +43,7 @@ jobs:
         run: |
           set -x
           cargo build --release
-          cargo --force install cargo-deb
+          cargo install --force cargo-deb
           cargo deb --deb-version $VERSION
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
@@ -48,7 +54,8 @@ jobs:
           cargo build --release
           cargo install cargo-wix
           cargo wix --version
-          cargo wix --no-build --nocapture --output ./target/wix/frizz.msi
+          cargo wix init
+          cargo wix --output ./target/wix/frizz.msi
 
       - name: build msi
         if: matrix.os == 'macos-latest'
