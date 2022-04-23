@@ -56,8 +56,8 @@ jobs:
           cargo install cargo-wix
           cargo wix --version
           cargo wix init
-          cargo wix --output ./target/wix/${{ steps.tag.outputs.release_tag }}.msi
-          mv ./target/wix/${{ steps.tag.outputs.release_tag }}.msi .
+          cargo wix --output ./target/wix/frizz-${{ steps.tag.outputs.release_tag }}.msi
+          mv ./target/wix/frizz-${{ steps.tag.outputs.release_tag }}.msi .
 
       - name: build dmg
         if: matrix.os == 'macos-latest'
