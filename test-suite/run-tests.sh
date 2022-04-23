@@ -14,13 +14,12 @@ fi
 
 caddy run &
 
-cd ../
 cargo --version
 cargo fmt -- --check
 cargo clippy -- -Dwarnings
 cargo test
 cargo run
-cd target/debug/
+export PATH=$PATH:./target/debug/
 set -x
 
 # running post data from CLI
