@@ -26,12 +26,14 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Run rust/cargo stuff
         run: |
+          VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`-${{github.run_number}}
           curl https://sh.rustup.rs -sSf | sh -s -- -y
           source $HOME/.cargo/env
           cd test-suite
           ./run-tests.sh
+          cargo build --release
           cargo install cargo-deb
-          cargo deb
+          cargo deb --deb-version $VERSION
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
       - name: Release with Notes
