@@ -65,9 +65,7 @@ jobs:
           set -x
           cargo build --release
           cargo build --target x86_64-apple-darwin
-          hdiutil create ${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/ -ov
-          DMGFILE=`find -name *.dmg .`
-          mv $DMGFILE .
+          hdiutil create frizz-${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/ -ov
 
       - name: Release with Notes
         uses: softprops/action-gh-release@v1
