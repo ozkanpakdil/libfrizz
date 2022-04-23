@@ -44,7 +44,7 @@ jobs:
           set -x
           cargo build --release
           cargo install --force cargo-deb
-          cargo deb --deb-version $VERSION
+          cargo deb --deb-version ${{ steps.tag.outputs.release_tag }}
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
 
