@@ -13,7 +13,6 @@ jobs:
       - name: Install dependencies
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install alien build-essential fakeroot devscripts
-
       - uses: actions/checkout@v1
       - uses: actions/cache@v2
         with:
@@ -24,9 +23,9 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Generate release tag
+      - name: Generate release tag and build
         id: tag
-        if: matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
           VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`-${{github.run_number}}
           echo "::set-output name=release_tag::$VERSION"
@@ -40,7 +39,7 @@ jobs:
           set -x
           cargo build --release
           cargo install cargo-deb
-          cargo deb --deb-version $VERSION
+          cargo --force deb --deb-version $VERSION
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
 
