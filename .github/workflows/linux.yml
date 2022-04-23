@@ -33,6 +33,7 @@ jobs:
           cargo build --release
           cargo install cargo-deb
           cargo deb --deb-version $VERSION
+          set -x
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
       - name: Release with Notes
