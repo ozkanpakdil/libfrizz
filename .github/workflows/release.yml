@@ -37,8 +37,8 @@ jobs:
         run: |
           set -x
           cargo build --release
-          cargo install cargo-deb
-          cargo --force deb --deb-version $VERSION
+          cargo --force install cargo-deb
+          cargo deb --deb-version $VERSION
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -r $DEBFILE
 
