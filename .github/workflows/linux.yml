@@ -1,4 +1,4 @@
-name: Frizz ci run
+name: Frizz ci linux
 
 on: [ push ]
 
