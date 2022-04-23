@@ -56,8 +56,8 @@ jobs:
           cargo install cargo-wix
           cargo wix --version
           cargo wix init
-          cargo wix --output ./target/wix/frizz.msi
-          mv ./target/wix/frizz.msi .
+          cargo wix --output ./target/wix/${{ steps.tag.outputs.release_tag }}.msi
+          mv ./target/wix/${{ steps.tag.outputs.release_tag }}.msi .
 
       - name: build dmg
         if: matrix.os == 'macos-latest'
@@ -65,7 +65,8 @@ jobs:
           set -x
           cargo build --release
           cargo build --target x86_64-apple-darwin
-          DMGFILE=`find -name *.dmg target/x86_64-apple-darwin/`
+          hdiutil create ${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/ -ov
+          DMGFILE=`find -name *.dmg .`
           mv $DMGFILE .
 
       - name: Release with Notes
