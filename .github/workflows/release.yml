@@ -66,7 +66,7 @@ jobs:
           cargo build --release
           cargo build --target x86_64-apple-darwin
           find target/x86_64-apple-darwin/
-          hdiutil create frizz-${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/release/frizz -ov
+          hdiutil create frizz-${{ steps.tag.outputs.release_tag }}.dmg -srcfolder target/x86_64-apple-darwin/debug/frizz -ov
 
       - name: Release with Notes
         uses: softprops/action-gh-release@v1
