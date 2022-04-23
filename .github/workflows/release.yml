@@ -9,6 +9,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [nightly, stable]
     steps:
       - name: Install dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -29,8 +30,6 @@ jobs:
         run: |
           VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`-${{github.run_number}}
           echo "::set-output name=release_tag::$VERSION"
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          source $HOME/.cargo/env
           ./test-suite/run-tests.sh
 
       - name: build deb,rpm
