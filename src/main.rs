@@ -20,11 +20,15 @@ mod port_details;
 async fn main() -> Result<(), Error> {
     let frizz_version = env!("CARGO_PKG_VERSION");
     let yaml = load_yaml!("cli.yaml");
-    let cmd_args = App::from(yaml).get_matches();
+    let cmd_args = App::from(yaml)
+        .version(env!("CARGO_PKG_VERSION"))
+        .get_matches();
 
     if !cmd_args.is_present("target") {
         println!("\nERROR:Please provide the parameters\n");
-        App::from(yaml).print_help().ok();
+        App::from(yaml)
+            .version(env!("CARGO_PKG_VERSION"))
+            .print_help().ok();
         exit(0);
     }
     let target = cmd_args.value_of("target").unwrap();

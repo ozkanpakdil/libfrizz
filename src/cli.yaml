@@ -1,5 +1,4 @@
 name: Frizz is CLI for libfrizz, check https://github.com/kursatkobya/libfrizz
-version: "0.0"
 author: Ozkan Pakdil, Kursat Kobya
 about: transfer data
 args:
