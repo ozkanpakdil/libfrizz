@@ -4,8 +4,13 @@ version = "0.2.0"
 edition = "2018"
 authors = ["{{authors}}"]
 description = "curl alternative written in rust."
-license = "MIT OR Apache-2.0"
+license = "gpl-3.0"
 readme = "README.md"
+keywords = ["curl", "httpie"]
+categories = ["http", "tool"]
+repository = "https://github.com/ozkanpakdil/libfrizz"
+documentation = "https://github.com/ozkanpakdil/libfrizz"
+homepage = "https://github.com/ozkanpakdil/libfrizz"
 
 [lib]
 name = "libfrizz"
