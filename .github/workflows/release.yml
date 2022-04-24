@@ -42,12 +42,6 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           set -x
-          cargo build --release
-          cargo install --force cargo-deb
-          cargo deb --deb-version ${{ steps.tag.outputs.release_tag }}
-          DEBFILE=`find -name *.deb`
-          sudo alien --nopatch -rk $DEBFILE
-          mv $DEBFILE .
           cargo install cargo-show
           VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`
           LATEST=`cargo show frizz --json|jq -r '.crate.newest_version'`
@@ -57,6 +51,12 @@ jobs:
               echo "new version going to be published"
               cargo publish --token  ${{ secrets.cratesio_token }}
           fi
+          cargo build --release
+          cargo install --force cargo-deb
+          cargo deb --deb-version ${{ steps.tag.outputs.release_tag }}
+          DEBFILE=`find -name *.deb`
+          sudo alien --nopatch -rk $DEBFILE
+          mv $DEBFILE .
 
       - name: build msi
         if: matrix.os == 'windows-latest'
