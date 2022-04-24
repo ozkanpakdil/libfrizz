@@ -7,7 +7,10 @@ description = "curl alternative written in rust."
 license = "GPL-3.0"
 readme = "README.md"
 keywords = ["curl", "httpie"]
-categories = ["http", "tool"]
+categories = ["development-tools",
+              "development-tools::testing",
+              "web-programming::http-client",
+              "network-programming"]
 repository = "https://github.com/ozkanpakdil/libfrizz"
 documentation = "https://github.com/ozkanpakdil/libfrizz"
 homepage = "https://github.com/ozkanpakdil/libfrizz"
