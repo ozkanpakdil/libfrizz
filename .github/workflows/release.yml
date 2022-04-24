@@ -48,7 +48,15 @@ jobs:
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -rk $DEBFILE
           mv $DEBFILE .
-          cargo publish --token  ${{ secrets.cratesio_token }}
+          cargo install cargo-show
+          VERSION=`grep version Cargo.toml | head -n1| awk '{ print $3 }'|tr -d '"'`
+          LATEST=`cargo show frizz --json|jq -r '.crate.newest_version'`
+          if [ "$VERSION" == "$LATEST" ]; then
+              echo "looks like this is already publish"
+          else
+              echo "new version going to be published"
+              cargo publish --token  ${{ secrets.cratesio_token }}
+          fi
 
       - name: build msi
         if: matrix.os == 'windows-latest'
