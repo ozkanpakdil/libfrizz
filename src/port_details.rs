@@ -4,10 +4,11 @@ use std::fs;
 use std::path::Path;
 use std::sync::Mutex;
 
-use chrono::{DateTime, Local};
+use chrono::{Date, Datelike, DateTime, Local, NaiveDate};
 use regex::Regex;
 use reqwest::Method;
 use serde_json::Value;
+use std::process::exit;
 
 use crate::{execute_request, ExecRequest, TransportLayerProtocol};
 
@@ -80,12 +81,23 @@ pub async fn init() {
     let s = String::from(home::home_dir().unwrap().as_path().to_str().unwrap());
     let home = format!("{}/.frizz/", &s);
     let service_file = format!("{}/.frizz/nmap-services", &s);
+    let query_file = format!("{}/.frizz/query", &s);
+    if Path::exists(query_file.as_ref()){
+        let query_date_string = fs::read_to_string(&query_file)
+            .expect("Something went wrong reading the file");
+        log::debug!("query date:{}",query_date_string);
+        let query_date = NaiveDate::parse_from_str(query_date_string.as_str(), "%Y-%m-%d").unwrap();
+        if query_date.day() == Local::now().day() && query_date.month() == Local::now().month(){
+            // today has been checked before
+            return;
+        }
+    }
+
     if !Path::exists(service_file.as_ref()) {
         // download the file if it does not exist
-        download_overwrite(home, &service_file).await;
+        download_overwrite(home, &service_file,query_file).await;
     } else {
-        static APP_USER_AGENT: &str =
-            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+        static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
         let client = reqwest::Client::builder()
             .user_agent(APP_USER_AGENT)
@@ -113,7 +125,9 @@ pub async fn init() {
         let v: Value = serde_json::from_str(resp.as_str()).unwrap();
         let r = jql::walker(&v, query);
         let file_date_in_git = DateTime::parse_from_rfc3339(r.unwrap().as_str().unwrap()).unwrap();
-        log::debug!("file last modified in git:{:?}", file_date_in_git);
+        log::debug!("file_date_in_git:{:?}", file_date_in_git);
+        log::debug!("last_modified:{:?}", last_modified);
+        log::debug!("which:{:?}", file_date_in_git.gt(last_modified));
 
         if file_date_in_git.gt(last_modified) {
             // check if git has newer file
@@ -121,12 +135,12 @@ pub async fn init() {
                 "Git has newer file, download and overwrite local file.git:{}",
                 file_date_in_git
             );
-            download_overwrite(home, &service_file).await;
+            download_overwrite(home, &service_file,query_file).await;
         }
     }
 }
 
-async fn download_overwrite(home: String, service_file: &str) {
+async fn download_overwrite(home: String, service_file: &str,query_file: String) {
     execute_request(ExecRequest {
         url: "https://raw.githubusercontent.com/nmap/nmap/master/nmap-services".to_string(),
         user_agent: "frizz".to_string(),
@@ -139,12 +153,17 @@ async fn download_overwrite(home: String, service_file: &str) {
     })
     .await
     .unwrap();
-    fs::create_dir(home)
-        .and_then(|_| {
-            fs::copy("./nmap-services", &service_file)
-                .and_then(|_| fs::remove_file("nmap-services"))
-        })
-        .ok();
+    if !Path::exists(home.as_ref()){
+        fs::create_dir(home).unwrap();
+    }
+    if Path::exists(service_file.as_ref()) {
+        fs::remove_file(&service_file).unwrap();
+        fs::remove_file(&query_file).unwrap();
+    }
+    fs::copy("./nmap-services", &service_file).unwrap();
+    fs::remove_file("./nmap-services").unwrap();
+    let now_str = format!("{}", Local::now().format("%Y-%m-%d"));
+    fs::write(query_file,now_str).unwrap();
 }
 
 #[cfg(test)]
