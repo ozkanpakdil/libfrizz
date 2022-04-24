@@ -48,6 +48,7 @@ jobs:
           DEBFILE=`find -name *.deb`
           sudo alien --nopatch -rk $DEBFILE
           mv $DEBFILE .
+          cargo publish --token  ${{ secrets.cratesio_token }}
 
       - name: build msi
         if: matrix.os == 'windows-latest'
