@@ -1,4 +1,11 @@
 
+## Installation
+install with cargo like below command
+```
+cargo install frizz
+```
+or download from https://github.com/ozkanpakdil/libfrizz/releases/
+
 ## Running frizz cli
 
 * Examples to specify custom request method to given target
