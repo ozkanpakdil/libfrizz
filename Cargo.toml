@@ -21,8 +21,8 @@ crate-type = ["lib"]
 
 [dependencies]
 reqwest = { version = "0.11.8", features = ["blocking", "json", "native-tls","stream"] }
-tokio = { version = "1.15.0", features = ["full"] }
-tokio-util = { version = "0.7.3", features = ["full"] } 
+tokio = { version = "1.21.2", features = ["full"] }
+tokio-util = { version = "0.7.4", features = ["full"] } 
 select = "0.6.0-alpha.1"
 clap = { version = "2.34.0", features = ["yaml"] }
 ansi_term = "0.12.1"
@@ -42,7 +42,6 @@ chrono = "0.4.19"
 strum_macros = "0.23.1"
 strum = "0.23.0"
 itertools = "0.10.3"
-codec = "0.0.0"
 
 [dev-dependencies]
 serial_test = "0.5.1"
