@@ -29,6 +29,7 @@ async fn main() -> Result<(), Error> {
         App::from(yaml)
             .version(env!("CARGO_PKG_VERSION"))
             .print_help().ok();
+        println!("");
         exit(0);
     }
     let target = cmd_args.value_of("target").unwrap();
@@ -109,8 +110,8 @@ async fn main() -> Result<(), Error> {
             http_method: method,
             progress_bar: cmd_args.is_present("progress-bar"),
         })
-        .await
-        .unwrap();
+            .await
+            .unwrap();
         let body = res.body;
 
         if cmd_args.is_present("fail") && !res.status_code.contains("200") {
@@ -127,15 +128,25 @@ async fn main() -> Result<(), Error> {
         }
 
         if cmd_args.is_present("pretty") {
-            let opts = PrintOptions {
-                indent_width: 4,
-                max_width: 10,
-                use_tabs: false,
-                new_line_text: "\n",
-            };
-            let items = dprint_core::formatting::parser_helpers::parse_string(body.as_str());
-            let out_prep = Colour::White.paint(dprint_core::formatting::format(|| items, opts));
-            out_writer.write(out_prep.as_bytes()).ok();
+            let mut builder = dprint_plugin_json::configuration::ConfigurationBuilder::new();
+            builder.use_tabs(false);
+            builder.line_width(180);
+            builder.use_tabs(false);
+            let out_prep = Colour::White.paint(dprint_plugin_json::format_text(body.as_str(), &builder.build())
+                .unwrap_or_default()
+                .unwrap_or_else(||{
+                    let opts = PrintOptions {
+                        indent_width: 4,
+                        max_width: 10,
+                        use_tabs: false,
+                        new_line_text: "\n",
+                    };
+                    let items = dprint_core::formatting::parser_helpers::parse_string(body.as_str());
+                    dprint_core::formatting::format(|| items, opts)
+                }) //"cant be formatted".parse().unwrap()
+            );
+            out_writer.write(out_prep.as_bytes())
+                .ok();
         } else {
             out_writer
                 .write(format!("{}", Colour::White.paint(body)).as_bytes())
@@ -192,7 +203,7 @@ async fn main() -> Result<(), Error> {
             proto_opt,
             out_writer,
         )
-        .await;
+            .await;
         return Ok(());
     } else {
         // assume telnet or any socket protocol

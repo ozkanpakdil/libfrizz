@@ -13,7 +13,7 @@ args:
       help: Prints headers for choosen action.
   - pretty:
       long: pretty
-      help: format the body of response, html or json ....
+      help: format the body of response, html or json
   - user-agent:
       short: A
       long: user-agent
